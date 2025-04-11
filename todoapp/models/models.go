@@ -1,0 +1,19 @@
+package models
+
+import "time"
+
+type Todo struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Title     string    `json:"title"`
+	Completed bool      `json:"completed"`
+	DueDate   time.Time `json:"due_date"`
+	Priority  string    `json:"priority"`
+}
+
+type Library struct {
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	Name     string `json:"name"`
+	Location string `json:"location"`
+	Type     string `json:"type"`
+	IsOpen   bool   `json:"is_open"`
+}
