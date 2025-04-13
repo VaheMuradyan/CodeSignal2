@@ -1,6 +1,7 @@
 package todo_repository
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/models"
@@ -39,9 +40,8 @@ func ResetTodos(db *gorm.DB) {
 func GetFilteredLibraries(db *gorm.DB, location string, locationExists bool, libraryType string, typeExists bool, openStatus string, openStatusExists bool) []models.Library {
 	var libraries []models.Library
 
-	// TODO: Initialize the query
 	query := db.Model(&models.Library{})
-	// TODO: add conditions dynamically based on the presence of query parameters
+
 	if locationExists {
 		query = query.Where("location = ?", location)
 	}
@@ -51,8 +51,22 @@ func GetFilteredLibraries(db *gorm.DB, location string, locationExists bool, lib
 	if openStatusExists {
 		query = query.Where("is_open = ?", openStatus == "true")
 	}
-	// TODO: execute query
+
 	query.Find(&libraries)
 
 	return libraries
+}
+
+func GetTodoByID(db *gorm.DB, id string) (models.Todo, error) {
+	var todo models.Todo
+	query := db.Model(&models.Todo{})
+	i, err := strconv.Atoi(id)
+	if err != nil {
+		return models.Todo{}, err
+	}
+	err = query.Where("id = ?", uint(i)).Find(&todo).Error
+	if err != nil {
+		return models.Todo{}, err
+	}
+	return todo, nil
 }

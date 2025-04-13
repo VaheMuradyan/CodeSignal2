@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Todo struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
@@ -16,4 +20,10 @@ type Library struct {
 	Location string `json:"location"`
 	Type     string `json:"type"`
 	IsOpen   bool   `json:"is_open"`
+}
+
+type User struct {
+	gorm.Model
+	Username string `gorm:"uniqueIndex"`
+	Password string
 }
