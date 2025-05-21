@@ -11,6 +11,7 @@ import (
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/repositories/todo_repository"
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/repositories/user_repository"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -136,14 +137,19 @@ func GetTodoService(db *gorm.DB, id string) (models.Todo, error) {
 }
 
 // =================================== User Parts ==================================
-func RegisterUser(db *gorm.DB, username, password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func RegisterUser(db *gorm.DB, creds models.Credentials) error {
+
+	if err := user_repository.ValidCredentials(creds); err != nil {
+		return err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
 	user := models.User{
-		Username: username,
+		Username: creds.Username,
 		Password: string(hashedPassword),
 	}
 
@@ -157,4 +163,39 @@ func ValidateUserCredentials(db *gorm.DB, username, password string) error {
 	}
 
 	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+}
+
+// ============================ JWT ===============================
+
+var JWTSecret = []byte("your-secret-key")
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+func CreateToken(username string) (string, error) {
+	expirationTime := time.Now().Add(1 * time.Hour)
+	claims := &Claims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JWTSecret)
+}
+
+func ValidateToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return JWTSecret, nil
+	})
+	return claims, err
+}
+
+func Authenticate(username, password string) bool {
+	// Static credentials for demonstration purposes
+	return username == "testuser" && password == "testpass"
 }

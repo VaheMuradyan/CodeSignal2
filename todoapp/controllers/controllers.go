@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/models"
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/services"
 	"github.com/gin-gonic/gin"
+
 	"gorm.io/gorm"
 )
 
@@ -77,17 +79,13 @@ func GetTodoHandler(db *gorm.DB) gin.HandlerFunc {
 // =================== User ======================
 
 func Register(c *gin.Context, db *gorm.DB) {
-	var temp struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-
-	if err := c.ShouldBindJSON(&temp); err != nil {
+	var creds models.Credentials
+	if err := c.ShouldBindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
 
-	if err := services.RegisterUser(db, temp.Username, temp.Password); err != nil {
+	if err := services.RegisterUser(db, creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Username already exists"})
 		return
 	}
@@ -95,21 +93,51 @@ func Register(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusCreated, gin.H{"message": "User created"})
 }
 
-func Login(c *gin.Context, db *gorm.DB) {
-	var temp struct {
+func LoginWithSession(c *gin.Context) {
+	var credentials struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-
-	if err := c.ShouldBindJSON(&temp); err != nil {
+	if err := c.ShouldBindJSON(&credentials); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
 
-	if err := services.ValidateUserCredentials(db, temp.Username, temp.Password); err != nil {
+	if !services.Authenticate(credentials.Username, credentials.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"error": "Login successful"})
+	tokenString, err := services.CreateToken(credentials.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		return
+	}
+
+	c.SetCookie("session_token", tokenString, int(4*time.Hour), "/", "localhost", false, true)
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful, session created"})
+}
+func CheckSession(c *gin.Context) {
+	sessionToken, err := c.Cookie("session_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Session not found"})
+		return
+	}
+
+	claims, err := services.ValidateToken(sessionToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session is valid", "username": claims.Username})
+}
+
+func GenerateToken(c *gin.Context) {
+	token, err := services.CreateToken("testuser")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot generate token"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"error": token})
 }

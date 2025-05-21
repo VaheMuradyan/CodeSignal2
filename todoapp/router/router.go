@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/controllers"
+	"github.com/VaheMuradyan/CodeSignal2/todoapp/middleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -17,14 +18,6 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			controllers.GetOverviewHandler(c, db)
 		})
 
-		router.GET("/todos", func(c *gin.Context) {
-			controllers.GetTodosHandler(c, db)
-		})
-
-		router.POST("/todos", func(c *gin.Context) {
-			controllers.CreateTodoHandler(c, db)
-		})
-
 		router.DELETE("/reset", func(c *gin.Context) {
 			controllers.ResetTodosHandler(c, db)
 		})
@@ -38,6 +31,18 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		router.GET("/todos/:id", controllers.GetTodoHandler(db))
 
 		router.POST("/register", func(c *gin.Context) { controllers.Register(c, db) })
-		router.POST("/login", func(c *gin.Context) { controllers.Login(c, db) })
+		router.POST("/login", func(c *gin.Context) { controllers.LoginWithSession(c) })
+
+		protected := r.Group("/api", middleware.JWTAuthMiddleware())
+		{
+			protected.GET("/todos", func(c *gin.Context) {
+				controllers.GetTodosHandler(c, db)
+			})
+
+			protected.POST("/todos", func(c *gin.Context) {
+				controllers.CreateTodoHandler(c, db)
+			})
+
+		}
 	}
 }

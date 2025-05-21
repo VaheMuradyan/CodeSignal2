@@ -27,3 +27,8 @@ type User struct {
 	Username string `gorm:"uniqueIndex"`
 	Password string
 }
+
+type Credentials struct {
+	Username string `json:"username" validate:"min=5"`
+	Password string `json:"password" validate:"min=8"`
+}

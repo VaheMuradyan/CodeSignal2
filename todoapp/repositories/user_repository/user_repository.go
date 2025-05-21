@@ -2,8 +2,15 @@ package user_repository
 
 import (
 	"github.com/VaheMuradyan/CodeSignal2/todoapp/models"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
+
+var validate = validator.New()
+
+func ValidCredentials(creds models.Credentials) error {
+	return validate.Struct(creds)
+}
 
 func CreateUser(db *gorm.DB, user *models.User) error {
 	result := db.Create(user)
